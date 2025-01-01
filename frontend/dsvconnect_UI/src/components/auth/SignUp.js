@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Box, TextField, Button, Typography, Container, Paper, Link } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { registerUser } from './authSlice';
 
 const SignUp = () => {
   const [formData, setFormData] = useState({
@@ -10,6 +12,8 @@ const SignUp = () => {
     confirmPassword: '',
   });
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { loading, error } = useSelector((state) => state.auth);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -22,8 +26,17 @@ const SignUp = () => {
       alert('Passwords do not match!');
       return;
     }
-    console.log('Sign Up Data:', formData);
-    // Add your signup logic here
+
+    dispatch(registerUser({
+      username: formData.name,
+      email: formData.email,
+      password: formData.password,
+    }))
+      .unwrap()
+      .then(() => {
+        navigate('/dashboard'); // Redirect after successful registration
+      })
+      .catch((err) => console.error(err)); // Handle errors
   };
 
   return (
@@ -74,8 +87,19 @@ const SignUp = () => {
             value={formData.confirmPassword}
             onChange={handleChange}
           />
-          <Button type="submit" fullWidth variant="contained" sx={{ mt: 2 }}>
-            Sign Up
+          {error && (
+            <Typography color="error" sx={{ mt: 1 }}>
+              {error}
+            </Typography>
+          )}
+          <Button
+            type="submit"
+            fullWidth
+            variant="contained"
+            sx={{ mt: 2 }}
+            disabled={loading}
+          >
+            {loading ? 'Signing Up...' : 'Sign Up'}
           </Button>
         </Box>
         <Box mt={2} textAlign="center">

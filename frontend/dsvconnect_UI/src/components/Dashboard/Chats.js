@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box, List, ListItem, ListItemAvatar, ListItemText,
   Avatar, Typography, TextField, CircularProgress, ListItemIcon, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Button
@@ -11,12 +11,16 @@ import CloseIcon from '@mui/icons-material/Close';
 import axios from 'axios';
 import { io } from 'socket.io-client';
 import debounce from 'lodash.debounce'; // For debouncing input
+import { useDispatch, useSelector } from 'react-redux';
+
+import { fetchChats } from './chatSlice';
+import { createChat } from './chatSlice';
 
 // Initialize Socket.IO connection
 const socket = io('http://localhost:5000');
 
 const Chats = () => {
-  const [chatList, setChatList] = useState([]); // List of chats
+  // const [chatList, setChatList] = useState([]); // List of chats
   const [selectedChat, setSelectedChat] = useState(null); // Selected chat details
   const [openDialog, setOpenDialog] = useState(false); // Dialog state
   const [message, setMessage] = useState(''); // Message input
@@ -27,56 +31,67 @@ const Chats = () => {
   const [searchResults, setSearchResults] = useState([]); // Matched users
   const [isLoading, setIsLoading] = useState(false); // Loading indicator
 
-  const userId = '676d83b30240592bd0e37289'; // Replace with logged-in user's ID
+  const messagesEndRef = useRef(null)
 
-  console.log(chatList,"chat list")
+  const dispatch = useDispatch();
+   const chatList = useSelector(state => state.chats.chatList)
+   const userId = useSelector(state => state.auth.user._id );
+   console.log(userId , "from global")
+//  const userId = '676d83b30240592bd0e37289'; // Replace with logged-in user's ID
+// console.log(chatList,"chat list")
+  console.log(selectedChat,"messages")
 
-  // **1. Fetch Chat List**
   useEffect(() => {
-    const fetchChats = async () => {
-      try {
-        const response = await axios.get(`http://localhost:5000/api/messages/chats/${userId}`);
-        setChatList(response.data);
-      } catch (error) {
-        console.error('Error fetching chats:', error);
-      }
-    };
-    fetchChats();
-  }, []);
+       dispatch(fetchChats(userId))
+  },[dispatch])
+
+
+  useEffect(() => {
+    socket.on('receiveMessage', (newMessage) => {
+      console.log(newMessage, "new message");
+  
+      setSelectedChat((prev) => {
+        // Ensure message belongs to the selected chat
+          if(!(!newMessage || Object.keys(newMessage).length === 0)){
+            return {
+              ...prev,
+              messages: [...prev.messages, newMessage.chatData],
+            };
+          }
+      });
+    });
+  
+    return () => socket.off('receiveMessage'); // Cleanup listener on component unmount
+  }, []); // Register listener only once when the component loads
+  
+const scrollToBottom = () => {
+  messagesEndRef.current?.scrollIntoView({behavior:'smooth'})
+};
+useEffect(() => {
+  scrollToBottom();
+}, [selectedChat?.messages]); // Watch for changes in messages
+
 
   // **2. Handle Chat Selection**
   const handleChatClick = async (chat) => {
-    console.log(chat,"chat chat")
     setSelectedChat(chat);
     setOpenDialog(true);
 
     try {
-      const response = await axios.get(`http://localhost:5000/api/messages/${chat.chatId}`);
-      console.log(response.data,"response")
+      const response = await axios.get(`http://localhost:5000/api/messages/getMessages/${chat.chatId}`);
       setSelectedChat((prev) => ({ ...prev, messages: response.data }));
-      console.log(selectedChat,"selected chat")
-
-
+      const joinRoom = {
+        receiver:chat.participants.find(p => p._id !== userId)._id,
+        sender:userId
+      }
       //Join chat room for real-time updates
-      socket.emit('joinRoom', chat.chatId);
-
-      socket.on('receiveMessage', (newMessage) => {
-        setSelectedChat((prev) => ({
-          ...prev,
-          messages: [...prev.messages, newMessage],
-        }));
-      });
+      socket.emit('joinRoom', joinRoom);
     } catch (error) {
       console.error('Error fetching messages:', error);
     }
   };
 
-  // **3. Close Chat Dialog**
-  const handleCloseDialog = () => {
-    setOpenDialog(false);
-    setSelectedChat(null);
-    socket.disconnect();
-  };
+
 
   // **4. Send Message**
   const handleSendMessage = async () => {
@@ -89,10 +104,16 @@ const Chats = () => {
       };
 
       try {
-        const response = await axios.post('http://localhost:5000/api/messages', newMessage);
+        const response = await axios.post('http://localhost:5000/api/messages/sendMessage', newMessage);
         console.log(response.data,"from send message")
+        const sendMessageEmit = {
+          sender:userId,
+          receiver:selectedChat.participants.find(p => p._id !== userId)._id,
+          message:response.data.text,
+          chatData:response.data
 
-        socket.emit('sendMessage', response.data);
+        }
+        socket.emit('sendMessage', sendMessageEmit);
 
         setSelectedChat((prev) => ({
           ...prev,
@@ -105,7 +126,12 @@ const Chats = () => {
       }
     }
   };
-
+  // **3. Close Chat Dialog**
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+    setSelectedChat(null);
+    socket.disconnect();
+  };
   // **5. Search Users (Debounced)**
   const fetchSearchResults = async (query) => {
     setIsLoading(true);
@@ -117,7 +143,7 @@ const Chats = () => {
     }
 
     try {
-      const response = await axios.get(`http://localhost:5000/api/users/search?query=${query}`);
+      const response = await axios.get(`http://localhost:5000/api/users/search?query=${query}&id=${userId}`);
       setSearchResults(response.data);
       setIsLoading(false);
     } catch (error) {
@@ -136,20 +162,22 @@ const Chats = () => {
 
   // **6. Create New Chat**
   const handleCreateChat = async (user) => {
+
     try {
-      const newChat = {
-        participants: [userId, user._id],
-        isGroup: false,
-      };
 
-      const response = await axios.post('http://localhost:5000/api/messages/chats', newChat);
-
-      setChatList([...chatList, response.data]);
-      setSearchQuery('');
-      setSearchResults([]);
+      const dispatchResult = await dispatch(createChat({userId,participantId:user._id}))
+      if(createChat.fulfilled.match(dispatchResult)){
+         await dispatch(fetchChats(userId))
+      }else{
+        console.log("dispatch error")
+      }
+      
     } catch (error) {
-      console.error('Error creating chat:', error);
+
+      
+      
     }
+
   };
 
   return (
@@ -252,6 +280,7 @@ const Chats = () => {
         </Typography>
       </Box>
     ))}
+    <div ref={messagesEndRef} />
   </DialogContent>
 
   {/* Chat Input */}

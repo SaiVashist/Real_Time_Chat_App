@@ -3,7 +3,7 @@ import { ListItem, ListItemIcon, ListItemText } from '@mui/material';
 import GroupIcon from '@mui/icons-material/Group';
 
 const OnlineFriends = () => (
-  <ListItem button>
+  <ListItem button sx ={{cursor:'pointer'}}>
     <ListItemIcon>
       <GroupIcon />
     </ListItemIcon>

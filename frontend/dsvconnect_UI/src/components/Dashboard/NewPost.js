@@ -3,7 +3,7 @@ import { ListItem, ListItemIcon, ListItemText } from '@mui/material';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 
 const NewPost = ({ onClick }) => (
-  <ListItem button onClick={onClick}>
+  <ListItem button onClick={onClick} sx ={{cursor:'pointer'}}>
     <ListItemIcon>
       <AddPhotoAlternateIcon />
     </ListItemIcon>

@@ -1,17 +1,25 @@
 import React, { useState } from 'react';
 import { Box, TextField, Button, Typography, Container, Paper, Link } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { loginUser } from './authSlice'
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  const { loading, error } = useSelector((state) => state.auth);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log('Email:', email);
-    console.log('Password:', password);
-    // Add authentication logic here
+    dispatch(loginUser({ email, password }))
+      .unwrap()
+      .then(() => {
+        navigate('/dashboard'); // Redirect to dashboard after successful login
+      })
+      .catch((err) => console.error(err)); // Handle errors
   };
 
   return (
@@ -41,8 +49,19 @@ const Login = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          <Button type="submit" fullWidth variant="contained" sx={{ mt: 2 }}>
-            Login
+          {error && (
+            <Typography color="error" sx={{ mt: 1 }}>
+              {error}
+            </Typography>
+          )}
+          <Button
+            type="submit"
+            fullWidth
+            variant="contained"
+            sx={{ mt: 2 }}
+            disabled={loading}
+          >
+            {loading ? 'Logging in...' : 'Login'}
           </Button>
         </Box>
         <Box mt={2} textAlign="center">

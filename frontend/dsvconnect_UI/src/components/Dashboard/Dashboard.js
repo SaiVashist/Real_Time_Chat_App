@@ -10,6 +10,7 @@ import OnlineFriends from './OnlineFriends';
 import Chats from './Chats';
 import Settings from './Settings';
 import NewPost from './NewPost';
+import Logout from './Logout';
 
 const CustomTextField = styled('textarea')({
   width: '100%',
@@ -69,6 +70,7 @@ const Dashboard = () => {
           <NewPost onClick={() => setIsDialogOpen(true)} />
           <Chats />
           <Settings />
+          <Logout/>
         </List>
       </Drawer>
 
