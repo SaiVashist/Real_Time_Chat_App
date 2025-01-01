@@ -8,6 +8,9 @@ const generateToken = (id) => {
   return jwt.sign({ id }, JWT_SECRET, { expiresIn: '7d' });
 };
 
+const sayHello = () => {
+  res.status(200).json({data:"hello"})
+}
 // Register User
 const registerUser = async (req, res) => {
   const { username, email, password } = req.body;
@@ -150,5 +153,6 @@ module.exports = {
   getUserProfile,
   loginUser,
   registerUser,
-  searchUsers
+  searchUsers,
+  sayHello
 };
