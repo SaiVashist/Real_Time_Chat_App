@@ -16,15 +16,12 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchChats } from './chatSlice';
 import { createChat } from './chatSlice';
 
-// Initialize Socket.IO connection
-const socket = io('http://localhost:5000');
 
 const Chats = () => {
-  // const [chatList, setChatList] = useState([]); // List of chats
   const [selectedChat, setSelectedChat] = useState(null); // Selected chat details
   const [openDialog, setOpenDialog] = useState(false); // Dialog state
   const [message, setMessage] = useState(''); // Message input
-  const [typing, setTyping] = useState(false); // Typing indicator
+  //const [typing, setTyping] = useState(false); // Typing indicator
   const [showList, setShowList] = useState(false); // Toggle chat list
 
   const [searchQuery, setSearchQuery] = useState(''); // Search input
@@ -41,13 +38,34 @@ const Chats = () => {
 // console.log(chatList,"chat list")
   console.log(selectedChat,"messages")
 
+  const socket = useRef(null);
+
+useEffect(() => {
+  if (!socket.current) {
+    socket.current = io('http://localhost:5000', { reconnection: true });
+  }
+
+  socket.current.on('connect', () => {
+    console.log('Socket connected');
+  });
+
+  socket.current.on('disconnect', () => {
+    console.log('Socket disconnected');
+  });
+
+  return () => {
+    socket.current.disconnect();
+  };
+}, []);
+
+
   useEffect(() => {
        dispatch(fetchChats(userId))
-  },[dispatch])
+  },[dispatch,userId])
 
 
   useEffect(() => {
-    socket.on('receiveMessage', (newMessage) => {
+    socket.current.on('receiveMessage', (newMessage) => {
       console.log(newMessage, "new message");
   
       setSelectedChat((prev) => {
@@ -61,7 +79,7 @@ const Chats = () => {
       });
     });
   
-    return () => socket.off('receiveMessage'); // Cleanup listener on component unmount
+    return () => socket.current.off('receiveMessage'); // Cleanup listener on component unmount
   }, []); // Register listener only once when the component loads
   
 const scrollToBottom = () => {
@@ -74,6 +92,9 @@ useEffect(() => {
 
   // **2. Handle Chat Selection**
   const handleChatClick = async (chat) => {
+    if (!socket.current.connected) {
+      socket.current.connect(); // Ensure socket is connected
+    }
     setSelectedChat(chat);
     setOpenDialog(true);
 
@@ -85,7 +106,7 @@ useEffect(() => {
         sender:userId
       }
       //Join chat room for real-time updates
-      socket.emit('joinRoom', joinRoom);
+      socket.current.emit('joinRoom', joinRoom);
     } catch (error) {
       console.error('Error fetching messages:', error);
     }
@@ -113,7 +134,7 @@ useEffect(() => {
           chatData:response.data
 
         }
-        socket.emit('sendMessage', sendMessageEmit);
+        socket.current.emit('sendMessage', sendMessageEmit);
 
         setSelectedChat((prev) => ({
           ...prev,
@@ -130,7 +151,7 @@ useEffect(() => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setSelectedChat(null);
-    socket.disconnect();
+    socket.current.disconnect();
   };
   // **5. Search Users (Debounced)**
   const fetchSearchResults = async (query) => {
