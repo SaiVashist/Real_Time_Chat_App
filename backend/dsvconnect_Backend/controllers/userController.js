@@ -80,11 +80,19 @@ console.log(testHash === user.password)
 
     // Generate token and respond
     res.status(200).json({
-      _id: user._id,
-      username: user.username,
-      email: user.email,
-      token: generateToken(user._id),
+      message:'login success full',
+      user:{
+        id:user._id,
+        username:user.username,
+        email:user.email,
+        token:generateToken(user._id)
+      }
+      
     });
+    // _id: user._id,
+    //   username: user.username,
+    //   email: user.email,
+    //   token: generateToken(user._id),
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -117,7 +125,13 @@ const searchUsers = async (req, res) => {
     const users = await User.find({
       username: { $regex: query, $options: 'i' } // Case-insensitive search
     }).select('username _id profilePicture'); // Return only required fields
-  const filteredUser = users.filter(u => u._id.toString() !== id);
+    const filteredUser = users
+    .filter(u => u._id.toString() !== id) // Exclude current user
+    .map(u => ({
+      id: u._id.toString(), // Convert _id to id
+      username: u.username,
+      profilePicture: u.profilePicture,
+    }));
     res.status(200).json(filteredUser);
   } catch (err) {
     res.status(500).json({ message: 'Server Error', error: err.message });

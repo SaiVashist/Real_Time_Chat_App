@@ -7,6 +7,7 @@ import {
 import SendIcon from '@mui/icons-material/Send';
 import ChatIcon from '@mui/icons-material/Chat';
 import CloseIcon from '@mui/icons-material/Close';
+import SearchIcon from '@mui/icons-material/Search';
 
 import axios from 'axios';
 import { io } from 'socket.io-client';
@@ -27,19 +28,21 @@ const Chats = () => {
   const [searchQuery, setSearchQuery] = useState(''); // Search input
   const [searchResults, setSearchResults] = useState([]); // Matched users
   const [isLoading, setIsLoading] = useState(false); // Loading indicator
+  const [showSearch , setShowSearch] = useState(false)
 
   const messagesEndRef = useRef(null)
 
   const dispatch = useDispatch();
    const chatList = useSelector(state => state.chats.chatList)
-   const userId = useSelector(state => state.auth.user._id );
+   const userId = useSelector(state => state.auth.user.id );
    console.log(userId , "from global")
 //  const userId = '676d83b30240592bd0e37289'; // Replace with logged-in user's ID
 // console.log(chatList,"chat list")
-  console.log(selectedChat,"messages")
+  // console.log(selectedChat,"messages")
 
   const socket = useRef(null);
 
+  console.log(selectedChat?.messages,"messages")
 useEffect(() => {
   if (!socket.current) {
     socket.current = io('http://localhost:5000', { reconnection: true });
@@ -123,7 +126,7 @@ useEffect(() => {
         senderId: userId,
         text: message,
       };
-
+console.log(newMessage,"new message")
       try {
         const response = await axios.post('http://localhost:5000/api/messages/sendMessage', newMessage);
         console.log(response.data,"from send message")
@@ -134,14 +137,15 @@ useEffect(() => {
           chatData:response.data
 
         }
-        socket.current.emit('sendMessage', sendMessageEmit);
-
         setSelectedChat((prev) => ({
           ...prev,
           messages: [...prev.messages, response.data],
         }));
 
         setMessage('');
+        socket.current.emit('sendMessage', sendMessageEmit);
+
+     
       } catch (error) {
         console.error('Error sending message:', error);
       }
@@ -186,7 +190,7 @@ useEffect(() => {
 
     try {
 
-      const dispatchResult = await dispatch(createChat({userId,participantId:user._id}))
+      const dispatchResult = await dispatch(createChat({userId,participantId:user.id}))
       if(createChat.fulfilled.match(dispatchResult)){
          await dispatch(fetchChats(userId))
       }else{
@@ -203,129 +207,144 @@ useEffect(() => {
 
   return (
     <Box>
-      <ListItem button onClick={() => setShowList(!showList)} sx={{ cursor: 'pointer' }}>
-        <ListItemIcon><ChatIcon /></ListItemIcon>
-        <ListItemText primary="Chats" />
-      </ListItem>
-
-      {showList && (
-        <Box sx={{ height: '100%', backgroundColor: '#F8EDEB', p: 3, borderRadius: 2 }}>
-          <Typography variant="h5" sx={{ mb: 3 }}>Chats</Typography>
-
-          {chatList.length === 0 ? (
-            <Box>
-              <TextField
-                fullWidth
-                placeholder="Search users..."
-                value={searchQuery}
-                onChange={handleSearchInput}
-                sx={{ mb: 2 }}
-              />
-              {isLoading && <CircularProgress sx={{ ml: '50%' }} />}
-
-              {searchResults.length > 0 && (
-                <List>
-                  {searchResults.map((user) => (
-                    <ListItem
-                      key={user._id}
-                      button
-                      onClick={() => handleCreateChat(user)}
-                      sx={{ mb: 2 }}
-                    >
-                      <ListItemAvatar>
-                        <Avatar src={user.profilePicture || 'https://via.placeholder.com/150'} />
-                      </ListItemAvatar>
-                      <ListItemText primary={user.username} />
-                    </ListItem>
-                  ))}
-                </List>
-              )}
-            </Box>
-          ) : (
-            <List>
-              {chatList.map((chat) => (
-                <ListItem button key={chat.chatId} onClick={() => handleChatClick(chat)} sx={{ mb: 2 }}>
-                  <ListItemAvatar>
-                    <Avatar src={chat.avatar || 'https://via.placeholder.com/150'} />
-                  </ListItemAvatar>
-                  <ListItemText primary={chat.name} secondary="select to open chat" />
-                </ListItem>
-              ))}
-            </List>
-          )}
+    {/* Header with Chats and Search Icon */}
+    <ListItem button onClick={() => setShowList(!showList)} sx={{ cursor: 'pointer' }}>
+      <ListItemIcon><ChatIcon /></ListItemIcon>
+      <ListItemText primary="Chats" />
+    </ListItem>
+  
+    {showList && (
+      <Box sx={{ height: '100%', backgroundColor: '#F8EDEB', p: 3, borderRadius: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Typography variant="h5">Chats</Typography>
+          
+          {/* Search Icon */}
+          <IconButton onClick={() => setShowSearch(!showSearch)}>
+            <SearchIcon />
+          </IconButton>
         </Box>
-      )}
-      <Dialog open={openDialog} onClose={handleCloseDialog} fullWidth maxWidth="md">
-  <DialogTitle>
-    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      {/* Chat Header */}
-      <Avatar src={selectedChat?.avatar || 'https://via.placeholder.com/150'} />
-      <Typography variant="h6">{selectedChat?.name}</Typography>
-      <IconButton onClick={handleCloseDialog}>
-        <CloseIcon />
-      </IconButton>
-    </Box>
-  </DialogTitle>
-
-  {/* Chat Messages */}
-  <DialogContent
-    sx={{
-      height: '400px', // Fixed height with scroll
-      overflowY: 'auto', // Enable scrolling
-      padding: '10px',
-      backgroundColor: '#f4f6f8', // Light background color
-    }}
-  >
-    {selectedChat?.messages?.map((msg, index) => (
-      <Box
-        key={index}
+  
+        {/* Search Box (Toggle Visibility) */}
+        {showSearch && (
+          <TextField
+            fullWidth
+            placeholder="Search users..."
+            value={searchQuery}
+            onChange={handleSearchInput}
+            sx={{ mb: 2 }}
+          />
+          
+        )}
+        {isLoading && <CircularProgress sx={{ ml: '50%' }} />}
+  
+        {/* Chat List */}
+        {chatList.length === 0 ? (
+          <Box>
+            {isLoading && <CircularProgress sx={{ ml: '50%' }} />}
+            {searchResults.length > 0 && (
+              <List>
+                {searchResults.map((user) => (
+                  <ListItem
+                    key={user._id}
+                    button
+                    onClick={() => handleCreateChat(user)}
+                    sx={{ mb: 2 }}
+                  >
+                    <ListItemAvatar>
+                      <Avatar src={user.profilePicture || 'https://via.placeholder.com/150'} />
+                    </ListItemAvatar>
+                    <ListItemText primary={user.username} />
+                  </ListItem>
+                ))}
+              </List>
+            )}
+          </Box>
+        ) : (
+          <List>
+            {chatList.map((chat) => (
+              <ListItem button key={chat.chatId} onClick={() => handleChatClick(chat)} sx={{ mb: 2 }}>
+                <ListItemAvatar>
+                  <Avatar src={chat.avatar || 'https://via.placeholder.com/150'} />
+                </ListItemAvatar>
+                <ListItemText primary={chat.name} secondary="select to open chat" />
+              </ListItem>
+            ))}
+          </List>
+        )}
+      </Box>
+    )}
+  
+    {/* Chat Dialog */}
+    <Dialog open={openDialog} onClose={handleCloseDialog} fullWidth maxWidth="md">
+      <DialogTitle>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Avatar src={selectedChat?.avatar || 'https://via.placeholder.com/150'} />
+          <Typography variant="h6">{selectedChat?.name}</Typography>
+          <IconButton onClick={handleCloseDialog}>
+            <CloseIcon />
+          </IconButton>
+        </Box>
+      </DialogTitle>
+  
+      {/* Messages */}
+      <DialogContent
         sx={{
-          display: 'flex',
-          justifyContent: msg.senderId === userId ? 'flex-end' : 'flex-start', // Align based on sender
-          mb: 1, // Margin bottom
+          height: '400px',
+          overflowY: 'auto',
+          padding: '10px',
+          backgroundColor: '#f4f6f8',
         }}
       >
-        <Typography
-          sx={{
-            padding: '10px 15px',
-            borderRadius: '20px',
-            maxWidth: '75%',
-            wordWrap: 'break-word', // Wrap long messages
-            backgroundColor: msg.senderId === userId ? '#2196F3' : '#E0E0E0', // Blue for sender, gray for receiver
-            color: msg.senderId === userId ? '#FFFFFF' : '#000000', // Text color
-            fontSize: '0.9rem',
-            boxShadow: 1,
-          }}
+        {selectedChat?.messages?.map((msg, index) => (
+          <Box
+            key={index}
+            sx={{
+              display: 'flex',
+              justifyContent: msg.senderId === userId ? 'flex-end' : 'flex-start',
+              mb: 1,
+            }}
+          >
+            <Typography
+              sx={{
+                padding: '10px 15px',
+                borderRadius: '20px',
+                maxWidth: '75%',
+                wordWrap: 'break-word',
+                backgroundColor: msg.senderId === userId ? '#2196F3' : '#E0E0E0',
+                color: msg.senderId === userId ? '#FFFFFF' : '#000000',
+                fontSize: '0.9rem',
+                boxShadow: 1,
+              }}
+            >
+              {msg.text}
+            </Typography>
+          </Box>
+        ))}
+        <div ref={messagesEndRef} />
+      </DialogContent>
+  
+      {/* Input Box */}
+      <DialogActions sx={{ padding: '10px 20px', borderTop: '1px solid #E0E0E0' }}>
+        <TextField
+          fullWidth
+          variant="outlined"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          placeholder="Type a message..."
+          sx={{ backgroundColor: '#FFFFFF', borderRadius: '8px' }}
+        />
+        <Button
+          onClick={handleSendMessage}
+          variant="contained"
+          color="primary"
+          sx={{ ml: 2, height: '56px' }}
         >
-          {msg.text}
-        </Typography>
-      </Box>
-    ))}
-    <div ref={messagesEndRef} />
-  </DialogContent>
-
-  {/* Chat Input */}
-  <DialogActions sx={{ padding: '10px 20px', borderTop: '1px solid #E0E0E0' }}>
-    <TextField
-      fullWidth
-      variant="outlined"
-      value={message}
-      onChange={(e) => setMessage(e.target.value)}
-      placeholder="Type a message..."
-      sx={{ backgroundColor: '#FFFFFF', borderRadius: '8px' }}
-    />
-    <Button
-      onClick={handleSendMessage}
-      variant="contained"
-      color="primary"
-      sx={{ ml: 2, height: '56px' }}
-    >
-      <SendIcon />
-    </Button>
-  </DialogActions>
-</Dialog>
-
-    </Box>
+          <SendIcon />
+        </Button>
+      </DialogActions>
+    </Dialog>
+  </Box>
+  
   );
 };
 

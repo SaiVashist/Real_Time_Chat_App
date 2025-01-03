@@ -5,6 +5,7 @@ const connectDB = require('./config/db');
 // const chatRoutes = require('./routes/chatRoutes');
 const userRoutes = require('./routes/userRoutes');
 const messageRoutes = require('./routes/messageRoutes');
+const postRoutes = require('./routes/postRoutes')
 
 dotenv.config();
 connectDB();
@@ -26,6 +27,7 @@ app.use(express.json());
 // app.use('/api/chats', chatRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/posts',postRoutes)
 
 
 // Socket.IO for real-time messages
@@ -39,10 +41,11 @@ io.on('connection', (socket) => {
   });
 
   socket.on('sendMessage', (data) => {
-    const { sender, receiver, message,chatData } = data;
+    const { sender, receiver, message,chatData  } = data;
     const room = [sender, receiver].sort().join('_');
     console.log("message sent")
-    io.to(room).emit('receiveMessage', { sender, message,chatData });
+    // io.to(room).emit('receiveMessage', { sender, message,chatData });
+    socket.broadcast.to(room).emit('receiveMessage', { sender, message, chatData });
     console.log("message received")
   });
 

@@ -40,6 +40,11 @@ const createChat = async (req, res) => {
     console.log(req.body)
     const { participants, isGroup, groupName } = req.body;
 
+    if (participants.length !== 2 || participants.some(p => !p)) {
+      return res.status(400).json({ error: "Invalid participants" });
+    }
+    
+
     const chat = new Chat({
       participants,
       isGroup,
@@ -79,14 +84,14 @@ const getUserChats = async (req, res) => {
       return {
         chatId: chat._id,
         isGroup: chat.isGroup,
-        name: chat.isGroup ? chat.groupName : otherParticipants[0].username,
+        name: chat.isGroup ? chat?.groupName : otherParticipants[0]?.username,
         avatar: chat.isGroup
           ? 'https://example.com/group-avatar.png' // Placeholder for group icon
-          : otherParticipants[0].profilePicture,
-        participants: chat.participants, // Keep full participant details
+          : otherParticipants[0]?.profilePicture,
+        participants: chat?.participants, // Keep full participant details
       };
     });
-
+console.log(formattedChats.participants,"formated chats")
     res.status(200).json(formattedChats);
   } catch (err) {
     res.status(500).json({ error: err.message });

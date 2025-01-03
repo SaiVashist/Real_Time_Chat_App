@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { AppBar, Toolbar, IconButton, Drawer, List, Typography, Box, Dialog, DialogTitle, DialogContent, DialogActions, Button } from '@mui/material';
+import { AppBar, Toolbar, IconButton, Drawer, List, Typography, Box } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import ShareIcon from '@mui/icons-material/Share';
-import { styled } from '@mui/system';
 import imgd from '../../assets/beautiful-nature-mountain-scenery-with-flowers-picjumbo-com.jpg';
 import OnlineFriends from './OnlineFriends';
 import Chats from './Chats';
@@ -12,23 +11,13 @@ import Settings from './Settings';
 import NewPost from './NewPost';
 import Logout from './Logout';
 
-const CustomTextField = styled('textarea')({
-  width: '100%',
-  padding: '10px',
-  border: '1px solid #6A0572',
-  borderRadius: '8px',
-  outline: 'none',
-  '&:focus': {
-    borderColor: '#6A0572',
-    boxShadow: '0 0 5px #6A0572',
-  },
-});
+
 
 const Dashboard = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [newPost, setNewPost] = useState('');
-  const [image, setImage] = useState(null);
+  // const [isDialogOpen, setIsDialogOpen] = useState(false);
+  // const [newPost, setNewPost] = useState('');
+  // const [image, setImage] = useState(null);
   const [posts, setPosts] = useState([
     { text: 'Hello World!', image: imgd },
     { text: 'React with MUI is awesome!', image: imgd },
@@ -38,18 +27,7 @@ const Dashboard = () => {
     setDrawerOpen(!drawerOpen);
   };
 
-  const handlePost = () => {
-    if (newPost || image) {
-      setPosts([{ text: newPost, image }, ...posts]);
-      setNewPost('');
-      setImage(null);
-      setIsDialogOpen(false);
-    }
-  };
 
-  const handleImageChange = (e) => {
-    setImage(URL.createObjectURL(e.target.files[0]));
-  };
 
   return (
     <Box sx={{ display: 'flex', height: '100vh' }}>
@@ -67,7 +45,7 @@ const Dashboard = () => {
       <Drawer button = "true" anchor="left" open={drawerOpen} onClose={toggleDrawer}>
         <List>
           <OnlineFriends />
-          <NewPost onClick={() => setIsDialogOpen(true)} />
+          <NewPost  />
           <Chats />
           <Settings />
           <Logout/>
@@ -91,25 +69,7 @@ const Dashboard = () => {
         </Box>
       </Box>
 
-      <Dialog open={isDialogOpen} onClose={() => setIsDialogOpen(false)}>
-        <DialogTitle>New Post</DialogTitle>
-        <DialogContent>
-          <CustomTextField
-            rows={3}
-            placeholder="What's on your mind?"
-            value={newPost}
-            onChange={(e) => setNewPost(e.target.value)}
-          />
-          <Button component="label" sx={{ mt: 2 }}>
-            Upload Image
-            <input type="file" hidden onChange={handleImageChange} />
-          </Button>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handlePost} variant="contained">Post</Button>
-        </DialogActions>
-      </Dialog>
+
     </Box>
   );
 };
